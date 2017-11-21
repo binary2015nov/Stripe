@@ -677,11 +677,10 @@ namespace ServiceStack.Stripe
 			}
 			catch (Exception ex)
 			{
-				var webEx = ex.UnwrapIfSingleException() as WebException;
-				if (webEx != null)
-					HandleStripeException(webEx);
+                if (ex.UnwrapIfSingleException() is WebException webEx)
+                    HandleStripeException(webEx);
 
-				throw;
+                throw;
 			}
 		}
 
