@@ -590,11 +590,9 @@ namespace ServiceStack.Stripe
 			UserAgent = "servicestack .net stripe v1";
 			Currency = Currencies.UnitedStatesDollar;
 
-#if !PCL && !NETSTANDARD1_1
-			//https://support.stripe.com/questions/how-do-i-upgrade-my-stripe-integration-from-tls-1-0-to-tls-1-2#dotnet
-			ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
-#endif
-		}
+            //https://support.stripe.com/questions/how-do-i-upgrade-my-stripe-integration-from-tls-1-0-to-tls-1-2#dotnet
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+        }
 
 		protected virtual void InitRequest(HttpWebRequest req, string method, string idempotencyKey)
 		{
@@ -643,21 +641,11 @@ namespace ServiceStack.Stripe
 					InitRequest(req, method, idempotencyKey);
 				});
 
-				return response;
-			}
-			catch (WebException ex)
-			{
-				string errorBody = ex.GetResponseBody();
-				var errorStatus = ex.GetStatus() ?? HttpStatusCode.BadRequest;
-
-				if (ex.IsAny400())
-				{
-					var result = errorBody.FromJson<StripeErrors>();
-					throw new StripeException(result.Error)
-					{
-						StatusCode = errorStatus
-					};
-				}
+                return response;
+            }
+            catch (WebException ex)
+            {
+                HandleStripeException(ex);
 
 				throw;
 			}
@@ -673,10 +661,10 @@ namespace ServiceStack.Stripe
 					InitRequest(req, method, idempotencyKey);
 				});
 
-				return response;
-			}
-			catch (Exception ex)
-			{
+                return response;
+            }
+            catch (Exception ex)
+            {
                 if (ex.UnwrapIfSingleException() is WebException webEx)
                     HandleStripeException(webEx);
 
@@ -842,10 +830,10 @@ namespace ServiceStack.Stripe
 				if (entry.Value == null)
 					continue;
 
-				url = url.AddQueryParam(
-					"{0}[{1}]".Fmt(name, entry.Key),
-					entry.Value.Value.ToUnixTime());
-			}
+                url = url.AddQueryParam(
+                    $"{name}[{entry.Key}]",
+                    entry.Value.Value.ToUnixTime());
+            }
 
 			return url;
 		}
@@ -860,29 +848,32 @@ namespace ServiceStack.Stripe.Types
 		public StripeError Error { get; set; }
 	}
 
-	public class StripeError
-	{
-		public string Type { get; set; }
-		public string Message { get; set; }
-		public string Code { get; set; }
-		public string Param { get; set; }
-	}
+    public class StripeError
+    {
+        public string Type { get; set; }
+        public string Message { get; set; }
+        public string Code { get; set; }
+        public string Param { get; set; }
+        public string DeclineCode { get; set; }
+    }
 
-	public class StripeException : Exception
-	{
-		public StripeException(StripeError error)
-			: base(error.Message)
-		{
-			Code = error.Code;
-			Param = error.Param;
-			Type = error.Type;
-		}
+    public class StripeException : Exception
+    {
+        public StripeException(StripeError error)
+            : base(error.Message)
+        {
+            Code = error.Code;
+            Param = error.Param;
+            Type = error.Type;
+            DeclineCode = error.DeclineCode;
+        }
 
-		public string Code { get; set; }
-		public string Param { get; set; }
-		public string Type { get; set; }
-		public HttpStatusCode StatusCode { get; set; }
-	}
+        public string Code { get; set; }
+        public string DeclineCode { get; set; }
+        public string Param { get; set; }
+        public string Type { get; set; }
+        public HttpStatusCode StatusCode { get; set; }
+    }
 
 	public class StripeReference
 	{
